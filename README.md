@@ -38,8 +38,22 @@ We finally made it past the halfway point! Lets pick up where we left off and kn
 
 ## Day 52: Revert Deployment to Previous Version in Kubernetes
 
+Our prompt asks us to rollback our revisions to the previous version. I've actually never done this before. My first instinct was to check the deployment using kubectl describe to see what the current image is. I see that it was changed from some previous version to nginx:alpine. After speaking with AI, you can check the rollout history using `kubectl rollout history deployment/nginx-deployment`. You can then inspect each revision using the `--revision <#>` flag. There were only two revisions so for the first one, I found that the original image was nginx:1.16. 
 
+We can use the `kubectl rollout undo deployment/nginx-deployment` command to go back one revision. The `--to-revision` flag allows you to choose a specific revision. After running the command, check the rollout status using `kubectl rollout status`. Use the describe option to check the current image. Once everything looks good, we'll submit the lab. 
+
+Got the green check. Lets move to the next one. 
 
 ## Day 51: Execute Rolling Updates in Kubernetes
+
+Okay lets kick off the first day of our 50s with K8s rolling updates! I was just doing this yesterday with the kubectl rollout command I believe. We need to use an ipdated image and tag for the deployment named nginx-deployment. We'll verify that the pods are running afterwards. 
+
+Lets start off by getting the current deployment using `kubectl get deployments nginx-deployment`. You can also use `kubectl describe` to get the more detail version. I see with the describe option, we're running image nginx:1.16. Lets update that. We'll use the command `kubectl set image deployment/nginx-deployment nginx-container=nginx:1.19` to update the image. You can use the command `kubectl rollout status deployment/nginx-deployment` to see the rollout status of the deployment. Lastly, use the get and describe options for the deployment and pods to see that the image has been updated. 
+
+Got the green check! That completes this lab. 
+
+Personal Notes:
+- kubectl set image is an imperative command that changes the container image in an existing Kubernetes workload. For a Deployment, that changes its Pod template, which automatically triggers a rolling update. We also could've updated Hthe K8s manifest file and hit apply. This is the better production option. 
+
 
 
