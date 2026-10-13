@@ -30,6 +30,44 @@ We finally made it past the halfway point! Lets pick up where we left off and kn
 
 ## Day 54: Kubernetes Shared Volumes
 
+This lab was a little more difficult. We needed to create a Pod manifest file that had two containers that used a shared volume. We needed to run a sleep command for them so that they would remain in a running state. We then needed to create a file on one of the containers and make sure we saw that file on the other container although the file paths were differnet. 
+
+I asked AI to help me with this. We first created a Pod manifest file:
+
+apiVersion: v1
+kind: Pod
+metadata:
+  name: volume-share-nautilus
+spec:
+  containers:
+    - name: volume-container-nautilus-1
+      image: debian:latest
+      command:
+        - sleep
+        - "3600"
+      volumeMounts:
+        - name: volume-share
+          mountPath: /tmp/beta
+
+    - name: volume-container-nautilus-2
+      image: debian:latest
+      command:
+        - sleep
+        - "3600"
+      volumeMounts:
+        - name: volume-share
+          mountPath: /tmp/apps
+
+  volumes:
+    - name: volume-share
+      emptyDir: {}
+
+Lets break down this manifest file. The Pod is named `volume-share-nautilus`. You can see the names of both containers. To use a shared volume, you determine where to mount the volume under volumeMounts: and the name must match on both containers. The mountPath does not need to match. The containers will see the same files at their respective destinations. You then define this shared volume under the volumes: section. Name the volume. `emptyDir: {}` creates temporary storage for the lifetime of the Pod. The data remains available if an individual container restarts, but it is deleted when the Pod is deleted.
+
+As far as the sleep command part, here's what AI gave me: "Without the sleep command, a basic Debian container would likely start and immediately exit because it has no long-running process."
+
+We then deployed the Pod using `kubectl apply -f <file_path` and then you can use `kubectl get pods <pod_name>` to verify it has been created. Now, we needed to create the file on container one which we could log into the container using `kubectl exec -it <pod_name> -c <container_name> -- /bin/bash`. Go create the file in the proper place and `cat` to make sure the output is right. Then, log into the second container using the same command above with the updated flag values. 
+
 
 
 ## Day 53: Resolve VolumeMounts Issue in Kubernetes
