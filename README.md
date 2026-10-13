@@ -26,6 +26,44 @@ We finally made it past the halfway point! Lets pick up where we left off and kn
 
 ## Day 55: Kubernetes Sidecar Containers
 
+We're creating an NGINX container with a logging container as a sidecar. I've seen this concept often on Twitter so lets implement it. I altered the Pod manifest file from the previous lab. I completed as much of it as I could but I eventually had to ask AI for help. Here's the final result:
+
+apiVersion: v1
+kind: Pod
+metadata:
+  name: webserver
+spec:
+  containers:
+    - name: nginx-container
+      image: nginx:latest
+      volumeMounts:
+        - name: shared-logs
+          mountPath: /var/log/nginx
+
+  initContainers:
+    - name: sidecar-container
+      image: ubuntu:latest
+      restartPolicy: Always
+      command:
+        - sh
+        - -c
+        - while true; do cat /var/log/nginx/access.log /var/log/nginx/error.log; sleep 30; done
+      volumeMounts:
+        - name: shared-logs
+          mountPath: /var/log/nginx
+
+  volumes:
+    - name: shared-logs
+      emptyDir: {}
+
+
+Lets go over the design of the sidecar container. We used the `initContainer` block because the init container runs before the regular application container. So it would start before the NGINX container. It would perform its setup work and then exit. Afterwards, the main container starts. 
+
+The init container doesn't finish because we included the `restartPolicy: Always` line in the block. This turns the sidecar into a restartable init container. This allows it to remain running. 
+
+As far as the commands are concerned, we just need to put them on separate lines and remove the double quotation marks from around them. 
+
+That completes this lab. I'll be going over this lab a few times to get it under my fingers. Defiinitely a learning experience. 
 
 
 ## Day 54: Kubernetes Shared Volumes
