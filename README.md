@@ -22,7 +22,11 @@ We finally made it past the halfway point! Lets pick up where we left off and kn
 
 ## Day 56: Deploy Nginx Web Server on Kubernetes Cluster
 
+We have to create an NGINX static webpage deployment with multiple replicas. We'll use the nginx:latest image and the deployment will be named nginx-deployment. The container will be named nginx-container and we'll have 3 replicas. We also have to create  NodePort type service named nginx-service on port 30011. So my first thought is to create a Deployment manifest file. I'm not totally sure about the NodePort type service though. That could be a service file so I'll have to look that up. I'm going to ask google for a generic deployment and service manifest files and then fill in the information from there. Then, we'll use `kubectl apply -f` on each file. 
 
+You can find a generic deployment template on the kubernetes deployments webpage. Same with the service file. I tried to do this myself but it didn't work. Apparently the webpage needs to be up and running. I didn't do a curl test to check this. 
+
+UPDATE: Okay my target port was wrong in my service file. I also think maybe the app: fields didn't match in both of my files either. Other than that, everything was spot on. I may or may not write out of some of these deployment files. I need to understand them completely. Anyway, lab completed!
 
 ## Day 55: Kubernetes Sidecar Containers
 
