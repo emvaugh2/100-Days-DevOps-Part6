@@ -6,19 +6,186 @@ We finally made it past the halfway point! Lets pick up where we left off and kn
 
 ## Day 60: Persistent Volumes in Kubernetes
 
+Well, we're working with Persistent Volumes and Persistent Volume Claims. I haven't worked with either in K8s although I familiar with persistent volumes and mounts in the traditional Linux sense (s/o the RHCSA exam that I passed). Here's my best shot with configuring everything based on the lab prompt. I Frankensteined all of these different manifest type templates together. I don't know if I need to put these Persistent Volume blocks into a YAML file and also apply them. I'll ask Copilot for that part. The updates will be below. 
 
+```
+apiVersion: v1
+kind: Pod
+metadata:
+  name: pod-nautilus
+  labels:
+    app: nautilus-web
+
+spec:
+  containers:
+    - name: container-nautilus
+      image: httpd:latest
+
+      ports:
+        - containerPort: 80
+
+      volumeMounts:
+        - name: nautilus-storage
+          mountPath: /usr/local/apache2/htdocs
+
+  volumes:
+    - name: nautilus-storage
+      persistentVolumeClaim:
+        claimName: pvc-nautilus
+
+```
+
+
+```
+apiVersion: v1
+kind: Service
+metadata:
+  name: web-nautilus
+
+spec:
+  type: NodePort
+
+  selector:
+    app: nautilus-web
+
+  ports:
+    - protocol: TCP
+      port: 80
+      targetPort: 80
+      nodePort: 30008
+```
+
+```
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: pvc-nautilus
+
+spec:
+  storageClassName: manual
+
+  accessModes:
+    - ReadWriteOnce
+
+  resources:
+    requests:
+      storage: 3Gi
+```
+
+```
+apiVersion: v1
+kind: PersistentVolume
+metadata:
+  name: pv-nautilus
+spec:
+  storageClassName: manual
+  capacity:
+    storage: 5Gi
+  accessModes:
+    - ReadWriteOnce
+  hostPath:
+    path: "/mnt/data"
+```
+
+ UPDATE: Alright I was pretty spot on with the PersistentVolumeClaim (PVC) block. I just needed to added the resources section and make sure I requested the storage instead of saying the storage that I "had". My document root path was wrong as well but I'm not an Apache expert so I don't care about getting this wrong. My PersistentVolume (PV) block was actually correct! Nice. As far as my service manifest was concerned, it was almost perfect but I removed the selector line from it. I removed it because I didn't think we needed it and I wasn't sure what to put there. Guess we need to add it back. 
+
+ Okay once that's done, we actually do need to create separate files for all of these an apply them chronological starting from PV, PVC, Pod, then Service. 
+
+ You can also use `kubectl get pv` and `kubectl get pvc` to verify that your volumes were created and claimed. I did a `curl -i http://<NodePortIP>:80` to verify that Apache was serving a webpage. I did get an HTTP 200 OK message and some HTML output. I think we're done. 
+
+ Green check mark! Done with the 50s. Onto the 60s!
 
 ## Day 59: Troubleshoot Deployment issues in Kubernetes
 
+Dont you just love troubleshooting? If my networking days have told me anything, it's to always check the logs when an issue occurs. There's redis app that went down for this lab so I immediately did all of the kubectl get and describe commands for the pods, deployment, svc, etc. I actually even did it for the ConfigMap as well. I noticed a few issues. The pod was still in a ContainerCreating status. The image name was wrong `redis:alpin` instead of alpine. The configmap had a type "redis-cofig` instead of config. Now, I would try to fix this by going into the manifest files but there are none. So it seems like we need to do some type of rolling update to these things. I'll ask Copilot for this part. 
 
+UPDATE: Copilot pretty much confirmed everything I said. It was the config map typo and the image typo. It gave me the command `kubectl edit deployment redis-deployment` to edit a deployment file which was not listed on my Linux machine. I easily fixed the file and the deployment automatically updated. That was a real confidence booster for me! I feel like I know what I'm doing. Very nice. 
 
 ## Day 58: Deploy Grafana on Kubernetes Cluster
 
+We need to make a deployment named `grafana-deployment-xfusion` using any Grafana image for the app. We also need to create a NodePort type service with nodePort 32000 to expose the app. I'm going to take the usual approach and look up a Deployment and Service manifest file. 
 
+```
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: grafana-deployment-xfusion
+  labels:
+    app: grafana
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: grafana
+  template:
+    metadata:
+      labels:
+        app: grafana
+    spec:
+      containers:
+      - name: grafana-container
+        image: grafana/grafana:latest
+        ports:
+        - containerPort: 3000
+
+```
+
+
+```
+apiVersion: v1
+kind: Service
+metadata:
+  name: grafana-service-xfusion
+spec:
+  type: NodePort
+  selector:
+    app: grafana
+  ports:
+    - protocol: TCP
+      port: 3000
+      targetPort: 3000
+```   
+
+We'll see what Copilot has to say about it. 
+
+UPDATE: Okay I was still pretty close. My image path was wrong. It was originally `grafana:latest` when I should've been `grafana/grafana:latest`. Apparently Grafana listens on port 3000 by default so I needed to change my deployment manifest from port 32000 to port 3000. I'm assuming this is where I change my port to 3000 and my targetPort to 32000 accordingly to the lab. Okay I was close. In my service manifest, the port and targetPort have to be 3000 and I needed to add the nodePort line and make that equal to 32000. 
+
+Run the usual `kubectl aaply -f` on both files to get the Grafana container up and running. It wasn't working at first but I had to wait a second for the dashboard to load. I'm also adding `kubectl get endpoints` to my troubleshooting as well. The `kubectl get logs` had a lot of output but I eventually learn how to decipher through everything. 
+
+On to day 59.
 
 ## Day 57: Print Environment Variables
 
+This lab is all about environment variables which I never use. I see why they're important but I never really know when and how to use them. We need to create a pod named `print-envars-greetings` with a container named `print-env-container` that uses the bash image (is there a specific tag for this?). The container will have 3 environment variables named GREETING, COMPANY, and GROUP. We need to set the restartPolicy to Never and use an echo command that will print the 3 environment varibales. The `kubectl logs -f print-envars-greeting` can verify our output. I'm going to attempt this myself before AI. I found this Pod manifest file on the K8s website:
 
+```
+apiVersion: v1
+kind: Pod
+
+metadata:
+  name: print-envars-greeting
+
+spec:
+  containers:
+    - name: print-env-container
+      image: bash
+
+      env:
+        - name: GREETING
+          value: "Welcome to"
+
+        - name: COMPANY
+          value: "DevOps"
+
+        - name: GROUP
+          value: "Datacenter"
+
+      command: ["/bin/sh", "-c", 'echo "$(GREETING) $(COMPANY) $(GROUP)"']
+
+  restartPolicy: Never
+```
+
+UPDATE: So apparently that was REALLY close. I just needed to remove the template line because that's for deployments and not for Pod manifest files. Once again, I really need to learn each part of the manifest file so I don't run into this issue anymore. I guess the next part is I have to format this because I'm sure the YAML indents are off now since I removed the template line. Lastly, apparently the image should just be bash and not have a tag. Okay, I actually did a pretty good job at this. Going to use the code Copilot gives me instead. 
 
 ## Day 56: Deploy Nginx Web Server on Kubernetes Cluster
 
@@ -32,6 +199,7 @@ UPDATE: Okay my target port was wrong in my service file. I also think maybe the
 
 We're creating an NGINX container with a logging container as a sidecar. I've seen this concept often on Twitter so lets implement it. I altered the Pod manifest file from the previous lab. I completed as much of it as I could but I eventually had to ask AI for help. Here's the final result:
 
+```
 apiVersion: v1
 kind: Pod
 metadata:
@@ -59,7 +227,7 @@ spec:
   volumes:
     - name: shared-logs
       emptyDir: {}
-
+```
 
 Lets go over the design of the sidecar container. We used the `initContainer` block because the init container runs before the regular application container. So it would start before the NGINX container. It would perform its setup work and then exit. Afterwards, the main container starts. 
 
@@ -76,6 +244,7 @@ This lab was a little more difficult. We needed to create a Pod manifest file th
 
 I asked AI to help me with this. We first created a Pod manifest file:
 
+```
 apiVersion: v1
 kind: Pod
 metadata:
@@ -103,6 +272,7 @@ spec:
   volumes:
     - name: volume-share
       emptyDir: {}
+```
 
 Lets break down this manifest file. The Pod is named `volume-share-nautilus`. You can see the names of both containers. To use a shared volume, you determine where to mount the volume under volumeMounts: and the name must match on both containers. The mountPath does not need to match. The containers will see the same files at their respective destinations. You then define this shared volume under the volumes: section. Name the volume. `emptyDir: {}` creates temporary storage for the lifetime of the Pod. The data remains available if an individual container restarts, but it is deleted when the Pod is deleted.
 
